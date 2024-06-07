@@ -3,6 +3,7 @@ from Car import Car
 from DataLoader import DataLoader
 from Checkpoint import Checkpoint
 import math
+import time
 
 class RaceAI:
 
@@ -25,16 +26,16 @@ class RaceAI:
             pygame.draw.line(self.screen, (0, 0, 0), (x1, y1), (x2, y2), 1)
 
     def get_checkpoints(self):
-        checkpoints = []
+        cps = []
         for i in range(0, 20):
             if i >= 10:
                 i = i + 10
             x1, y1, x2, y2 = self.walls[i]
             x3, y3, x4, y4 = self.walls[i + 10]
             c = Checkpoint(((x1 + x3)/2, (y1 + y3)/2))
-            checkpoints.append(c)
+            cps.append(c)
             c.draw(self.screen)
-        return checkpoints
+        return cps
 
     def calculate_checkpoint_percentages(self):
         self.checkpoints[0].accumulated_distance = 0  # First checkpoint is start
@@ -69,9 +70,13 @@ class RaceAI:
 
         # Check if checkpoint can be captured
         if check_point_distance <= self.checkpoints[cur_checkpoint_index].capture_radius:
+            self.car.CheckpointCaptured()
             return self.get_complete_perc(car, cur_checkpoint_index + 1)  # Recursively check next checkpoint
         else:
             # Return accumulated reward of last checkpoint + reward of distance to next checkpoint
+            self.screen.blit(
+                pygame.font.SysFont('Comic Sans MS', 30).render(str(cur_checkpoint_index), False, (0, 0, 0)), (0, 50)
+            )
             return self.checkpoints[cur_checkpoint_index - 1].accumulated_reward + self.checkpoints[cur_checkpoint_index].get_reward_value(check_point_distance)
 
     @staticmethod
@@ -80,12 +85,13 @@ class RaceAI:
 
     def play_step(self, action):
         self.iteration += 1
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
 
-        reward = 0.0
+        reward = 0
 
         # move car
         m = self.car.move(action)
@@ -96,25 +102,10 @@ class RaceAI:
         # check for collision
         rc = self.car.raytrace_camera()
         if self.car.is_collision(rc):
-            gameOver = True
-            reward = -100
-            return reward, gameOver, self.distance
+            pen = -5
+            return pen, True, self.distance
 
-        reward += self.get_complete_perc(self.car, 1) * 500
-        print("reward " + str(reward))
-
-        print("rc: " + str(rc))
-        avg_rc = sum(rc)/len(rc)
-        if (min(rc) > 0.7):
-            print("positive")
-            reward += min(rc) * 10
-        else:
-            print("negative: "+ str(min(rc)))
-            reward -= (1-min(rc)) * 30
-
-        # # Additional reward for smooth turning
-        # if abs(action) < 7:
-        #     reward += 3  # Additional reward for smooth turns
+        reward += int(self.get_complete_perc(self.car, self.car.nextCheckpoint) * 100)
 
         print("reward " + str(reward))
         # draw car
@@ -122,13 +113,11 @@ class RaceAI:
 
         self.get_checkpoints()
 
-        self.screen.blit(pygame.font.SysFont('Comic Sans MS', 30).render(str(reward), False, (0, 0, 0)), (0,0))
+        self.screen.blit(pygame.font.SysFont('Comic Sans MS', 40).render(str(reward), False, (0, 0, 0)), (430,270))
 
         # update ui and clock
         pygame.display.update()
-        self.clock.tick(60)
-
-        #print(reward)
+        self.clock.tick(120)
 
         return reward, gameOver, self.distance
 

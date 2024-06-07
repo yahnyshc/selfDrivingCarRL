@@ -8,13 +8,14 @@ class Car:
         self.screen = screen
         self.walls = DataLoader().get_walls()
         self.x = self.walls[0][0] + 18
-        self.y = self.walls[0][1] + 5
+        self.y = self.walls[0][1]
         self.size = (15, 30)
         self.angle = 180
-        self.speed = 10
+        self.speed = 2
         self.max_turning = 5
         self.camera_distances = []
         self.MAX_CAMERA_DISTANCE = 35
+        self.nextCheckpoint = 1
 
         # Load car image
         self.image = pygame.image.load("img/car.png")
@@ -25,19 +26,23 @@ class Car:
     # reset the Car initial state
     def reset(self):
         self.x = self.walls[0][0] + 18
-        self.y = self.walls[0][1] + 5
+        self.y = self.walls[0][1]
+        self.nextCheckpoint = 1
         self.angle = 180
 
     # Move the car forward and turn it in the direction of movement
     # action is array of size 11 with the distribution of actions
     def move(self, action):
         # find index of maximum element in action array
-        action = action.index(1)-5
         self.angle += action
         (old_x, old_y) = (self.x, self.y)
         self.x -= self.speed * math.sin(math.radians(self.angle))
         self.y -= self.speed * math.cos(math.radians(self.angle))
         return self.distance((old_x, old_y), (self.x, self.y))
+
+
+    def CheckpointCaptured(self):
+        self.nextCheckpoint += 1
 
     # get center of the car coordinates
     def get_centre(self):
@@ -75,19 +80,18 @@ class Car:
 
     # detect whether the car collides the wall segment
     def is_collision(self, raytrace_output):
-        # car_boundaries = [
-        #     self.rotate(self.get_centre(), (self.x, self.y), self.angle),
-        #     self.rotate(self.get_centre(), (self.x + self.size[0] / 4, self.y), self.angle),
-        #     self.rotate(self.get_centre(), (self.x+self.size[0]/2, self.y), self.angle),
-        #     self.rotate(self.get_centre(), (self.x + self.size[0] / 4 * 3, self.y), self.angle),
-        #     self.rotate(self.get_centre(), (self.x + self.size[0], self.y), self.angle)
-        # ]
         car_boundaries = []
         c = self.get_centre()
         for angle in [-90, -45, 0, 45, 90]:
             car_boundaries.append(self.rotate_line_around(c, (c[0], self.y), self.get_centre(), angle)[1])
         for i in range(len(raytrace_output)):
-            if raytrace_output[i] <= (self.distance(self.get_centre(), car_boundaries[i]))/self.MAX_CAMERA_DISTANCE - 0.1:
+            if i == 0 or i == len(raytrace_output) - 1:
+                dist = 0.3
+            elif i == 1 or i == len(raytrace_output) - 2:
+                dist = 0.2
+            else:
+                dist = 0.1
+            if raytrace_output[i] <= (self.distance(self.get_centre(), car_boundaries[i]))/self.MAX_CAMERA_DISTANCE - dist:
                 return True
         return False
 

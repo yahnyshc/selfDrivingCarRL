@@ -5,25 +5,26 @@ from collections import deque
 from RaceAI import RaceAI
 from Model import Linear_QNet, QTrainer
 from Helper import plot
+import time
 
-
-MAX_MEMORY = 100_000
-BATCH_SIZE = 1000
-LR = 0.001
+MAX_MEMORY = 200_000
+BATCH_SIZE = 128
+LR = 0.0005
 
 class Agent:
 
     def __init__(self):
         self.n_games = 0
-        self.epsilon = 0 # randomness
-        self.gamma = 0.95 # discount rate
+        self.epsilon = 1.0 # randomness
+        self.min_epsilon = 0.10
+        self.epsilon_decay = 0.997
+        self.gamma = 0.9775 # discount rate
         self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = Linear_QNet(5, 256,   11)
+        self.model = Linear_QNet(5, 128, 128, 1)
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
     def get_state(self, game):
          state = [
-             # *game.car.get_centre(),
              *game.car.camera_distances
          ]
 
@@ -44,18 +45,16 @@ class Agent:
 
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
-        self.epsilon = 100 - self.n_games
-        final_move = [0 for i in range(0, 11)]
-        if random.randint(0, 200) < self.epsilon:
-            move = random.randint(0, 10)
-            final_move[move] = 1
+        final_move = 0
+        if random.random() > self.epsilon:
+            move = (random.random() * 10) - 5
+            final_move = move
         else:
             state0 = torch.tensor(state, dtype=torch.float)
             prediction = self.model(state0)
-            move = torch.argmax(prediction).item()
-            final_move[move] = 1
+            move = prediction[0].item()
+            final_move = move
 
-        print("final move: "+str(final_move))
         return final_move
 
 def train():
@@ -85,6 +84,8 @@ def train():
             # train long memory
             game.reset()
             agent.n_games += 1
+            agent.epsilon = max(agent.min_epsilon, agent.epsilon_decay * agent.epsilon)
+            print( "\n\nepsilon: " + str(agent.epsilon) )
             agent.train_long_memory()
 
             if score > record:

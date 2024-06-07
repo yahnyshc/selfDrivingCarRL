@@ -5,14 +5,20 @@ import torch.nn.functional as F
 import os
 
 class Linear_QNet(nn.Module):
-    def __init__(self, input_size, hidden_size,  output_size):
+    def __init__(self, input_size, hidden_size1, hidden_size2, output_size):
         super().__init__()
-        self.linear1 = nn.Linear(input_size, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, output_size)
+        self.linear1 = nn.Linear(input_size, hidden_size1)
+        self.dropout1 = nn.Dropout(0.3)  # 30% dropout rate
+        self.linear2 = nn.Linear(hidden_size1, hidden_size2)
+        self.dropout2 = nn.Dropout(0.3)  # 30% dropout rate
+        self.linear3 = nn.Linear(hidden_size2, output_size)
 
     def forward(self, x):
         x = F.relu(self.linear1(x))
-        x = self.linear2(x)
+        x = self.dropout1(x)
+        x = F.relu(self.linear2(x))
+        x = self.dropout2(x)
+        x = self.linear3(x)
         return x
 
     def save(self, file_name='model.pth'):
@@ -34,7 +40,7 @@ class QTrainer:
     def train_step(self, state, action, reward, next_state, done):
         state = torch.tensor(state, dtype=torch.float)
         next_state = torch.tensor(next_state, dtype=torch.float)
-        action = torch.tensor(action, dtype=torch.long)
+        action = torch.tensor(action, dtype=torch.float)
         reward = torch.tensor(reward, dtype=torch.float)
         # (n, x)
 
@@ -54,11 +60,14 @@ class QTrainer:
             if not done[idx]:
                 Q_new = reward[idx] + self.gamma * torch.max(self.model(next_state[idx]))
 
-            target[idx][torch.argmax(action).item()] = Q_new
+            target[idx][0] = Q_new
 
         self.optimizer.zero_grad()
         loss = self.criterion(target, pred)
         loss.backward()
+
+        # gradient clipping
+        #torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1)
 
         self.optimizer.step()
 
