@@ -11,10 +11,11 @@ class Car:
         self.y = self.walls[0][1]
         self.size = (15, 30)
         self.angle = 180
+        self.camera_angles = [-90, -45, 0, 45, 90]
         self.speed = 2
         self.max_turning = 5
         self.camera_distances = []
-        self.MAX_CAMERA_DISTANCE = 35
+        self.MAX_CAMERA_DISTANCE = 60
         self.nextCheckpoint = 1
 
         # Load car image
@@ -33,8 +34,20 @@ class Car:
     # Move the car forward and turn it in the direction of movement
     # action is array of size 11 with the distribution of actions
     def move(self, action):
+        speed, angle = 0, 0
+        if action[0]:
+            speed, angle = 0, -1
+        elif action[1]:
+            speed, angle = 1, -1
+        elif action[2]:
+            speed, angle = 1, 0
+        elif action[3]:
+            speed, angle = 1, 1
+        elif action[4]:
+            speed, angle = 0, 1
         # find index of maximum element in action array
-        self.angle += action
+        self.speed = speed
+        self.angle += angle
         (old_x, old_y) = (self.x, self.y)
         self.x -= self.speed * math.sin(math.radians(self.angle))
         self.y -= self.speed * math.cos(math.radians(self.angle))
@@ -80,18 +93,14 @@ class Car:
 
     # detect whether the car collides the wall segment
     def is_collision(self, raytrace_output):
-        car_boundaries = []
-        c = self.get_centre()
-        for angle in [-90, -45, 0, 45, 90]:
-            car_boundaries.append(self.rotate_line_around(c, (c[0], self.y), self.get_centre(), angle)[1])
         for i in range(len(raytrace_output)):
-            if i == 0 or i == len(raytrace_output) - 1:
-                dist = 0.3
-            elif i == 1 or i == len(raytrace_output) - 2:
-                dist = 0.2
-            else:
-                dist = 0.1
-            if raytrace_output[i] <= (self.distance(self.get_centre(), car_boundaries[i]))/self.MAX_CAMERA_DISTANCE - dist:
+            # if i == 0 or i == len(raytrace_output) - 1:
+            #     dist = 2
+            # elif i == 1 or i == len(raytrace_output) - 2:
+            #     dist = 2
+            # else:
+            #     dist = 2
+            if raytrace_output[i] < 2:
                 return True
         return False
 
@@ -106,8 +115,6 @@ class Car:
         px, py = point
         qx = ox + math.cos(angle) * (px - ox) + math.sin(angle) * (py - oy)
         qy = oy - math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
-        # qx = ox + math.cos(angle) * (px - ox) - math.sin(angle) * (py - oy)
-        # qy = oy + math.sin(angle) * (px - ox) + math.cos(angle) * (py - oy)
         return qx, qy
 
     # rotate line around the point counterclockwise
@@ -115,27 +122,17 @@ class Car:
         rad = math.radians(angle)
         return self.rotate(origin, start, rad), self.rotate(origin, end, rad)
 
-    # get the cameras vectors of the car
-    # def get_cameras(self):
-    #     # get the centre of the car
-    #     (x, y) = self.get_centre()
-    #     (xlcs, ylcs), (xlce, ylce) = (x, y), (self.x - 20, self.y - 20)
-    #     (xclcs, yclcs), (xclce, yclce) = (x, y), (x - 10, self.y - 20)
-    #     (xccs, yccs), (xcce, ycce) = (x, y), (x, self.y - 20)
-    #     (xcrcs, ycrcs), (xcrce, ycrce) = (x, y), (x + 10, self.y - 20)
-    #     (xrcs, yrcs), (xrce, yrce) = (x, y), (self.x + self.size[0] + 20, self.y - 20)
-    #     return (
-    #         ((xlcs, ylcs), (xlce, ylce)),
-    #         ((xclcs, yclcs), (xclce, yclce)),
-    #         ((xccs, yccs), (xcce, ycce)),
-    #         ((xcrcs, ycrcs), (xcrce, ycrce)),
-    #         ((xrcs, yrcs), (xrce, yrce)) )
-
-    # function to get an array of lines starting at center of the car and ending under 135, 90 and 45 degrees
+    # function to get an array of cameras starting at edges of the car and ending under 90, 45 and 0 degrees
     def get_cameras(self):
         c = self.get_centre()
-        for angle in [-90, -45, 0, 45, 90]:
-            yield self.rotate_line_around(c, (c[0], c[1]-self.MAX_CAMERA_DISTANCE), self.get_centre(), angle)
+        for angle in self.camera_angles:
+            # get camera end coordinates
+            _, (xe, ye) = self.rotate_line_around(c, (c[0], c[1] - self.MAX_CAMERA_DISTANCE), self.get_centre(), angle)
+            # form car rectangle
+            rect = pygame.Rect(self.x, self.y, self.size[0], self.size[1])
+            # get camera start coordinates
+            _, (xs, ys) = rect.clipline(c, (xe, ye))
+            yield (xs, ys), (xe, ye)
 
     # intersection between line(p1, p2) and line(p3, p4)
     def line_intersection(self, p1, p2, p3, p4):
@@ -167,25 +164,25 @@ class Car:
         # distance between p1 and p2
         return math.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2)
 
-    # raytrace vector to find the closest wall
+    # raytrace vector to find the find distances to walls
     def raytrace_camera(self):
         output = []
         for (cx1, cy1), (cx2, cy2) in self.get_cameras():
             camera_s, camera_e = self.rotate_line_around((cx1, cy1), (cx2, cy2), self.get_centre(), self.angle)
-            f = 0
+            f = False
             for x1, y1, x2, y2 in self.walls:
                 start, end = (x1, y1), (x2, y2)
                 rt = self.raytrace(start, end, camera_s, camera_e)
                 if rt:
-                    pygame.draw.line(self.screen, (255, 0, 0), camera_s, rt, 1)
-                    d = self.distance(camera_s, rt)/self.MAX_CAMERA_DISTANCE
-                    output.append(d if d < 1 else 1.0)
-                    f = 1
+                    pygame.draw.line(self.screen, (0, 255, 0), camera_s, rt, 1)
+                    d = self.distance(camera_s, rt)
+                    output.append(d)
+                    f = True
                     break
             if not f:
-                pygame.draw.line(self.screen, (255, 0, 0), camera_s, camera_e, 1)
-                d = self.distance(camera_s, camera_e)/self.MAX_CAMERA_DISTANCE
-                output.append(d if d < 1 else 1.0)
+                pygame.draw.line(self.screen, (0, 255, 0), camera_s, camera_e, 1)
+                d = self.distance(camera_s, camera_e)
+                output.append(d)
         self.camera_distances = output
         return output
 

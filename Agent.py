@@ -7,20 +7,20 @@ from Model import Linear_QNet, QTrainer
 from Helper import plot
 import time
 
-MAX_MEMORY = 200_000
+MAX_MEMORY = 100_000
 BATCH_SIZE = 128
-LR = 0.0005
+LR = 0.005
 
 class Agent:
 
     def __init__(self):
         self.n_games = 0
-        self.epsilon = 1.0 # randomness
+        self.epsilon = 0.9  # randomness
         self.min_epsilon = 0.10
-        self.epsilon_decay = 0.997
-        self.gamma = 0.9775 # discount rate
+        self.epsilon_decay = 0.9975
+        self.gamma = 0.985  # discount rate
         self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = Linear_QNet(5, 128, 128, 1)
+        self.model = Linear_QNet(5, 16,  12, 5)
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
     def get_state(self, game):
@@ -45,15 +45,15 @@ class Agent:
 
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
-        final_move = 0
+        final_move = [0, 0, 0, 0, 0]
         if random.random() > self.epsilon:
-            move = (random.random() * 10) - 5
-            final_move = move
+            move = random.randint(0, 4)
+            final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float)
             prediction = self.model(state0)
-            move = prediction[0].item()
-            final_move = move
+            move = torch.argmax(prediction).item()
+            final_move[move] = 1
 
         return final_move
 
@@ -85,7 +85,7 @@ def train():
             game.reset()
             agent.n_games += 1
             agent.epsilon = max(agent.min_epsilon, agent.epsilon_decay * agent.epsilon)
-            print( "\n\nepsilon: " + str(agent.epsilon) )
+            # print( "\n\nepsilon: " + str(agent.epsilon) )
             agent.train_long_memory()
 
             if score > record:

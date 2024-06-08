@@ -8,16 +8,16 @@ class Linear_QNet(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2, output_size):
         super().__init__()
         self.linear1 = nn.Linear(input_size, hidden_size1)
-        self.dropout1 = nn.Dropout(0.3)  # 30% dropout rate
+        #self.dropout1 = nn.Dropout(0.3)  # 30% dropout rate
         self.linear2 = nn.Linear(hidden_size1, hidden_size2)
-        self.dropout2 = nn.Dropout(0.3)  # 30% dropout rate
+        #self.dropout2 = nn.Dropout(0.3)  # 30% dropout rate
         self.linear3 = nn.Linear(hidden_size2, output_size)
 
     def forward(self, x):
         x = F.relu(self.linear1(x))
-        x = self.dropout1(x)
+        #x = self.dropout1(x)
         x = F.relu(self.linear2(x))
-        x = self.dropout2(x)
+        #x = self.dropout2(x)
         x = self.linear3(x)
         return x
 
@@ -52,7 +52,7 @@ class QTrainer:
             reward = torch.unsqueeze(reward, 0)
             done = (done, )
 
-        # 1: predicted Q values with current state
+        # 1: predicted output with current state
         pred = self.model(state)
         target = pred.clone()
         for idx in range(len(done)):
@@ -60,14 +60,11 @@ class QTrainer:
             if not done[idx]:
                 Q_new = reward[idx] + self.gamma * torch.max(self.model(next_state[idx]))
 
-            target[idx][0] = Q_new
+            target[idx][torch.argmax(action[idx]).item()] = Q_new
 
         self.optimizer.zero_grad()
         loss = self.criterion(target, pred)
         loss.backward()
-
-        # gradient clipping
-        #torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1)
 
         self.optimizer.step()
 

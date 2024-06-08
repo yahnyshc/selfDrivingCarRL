@@ -2,7 +2,7 @@ import pygame
 
 
 class Checkpoint:
-    def __init__(self, position, capture_radius=30, reward_value=0, distance_to_previous=0, accumulated_distance=0,
+    def __init__(self, position, capture_radius=25, reward_value=0, distance_to_previous=0, accumulated_distance=0,
                  accumulated_reward=0):
         self.position = position  # Position is a tuple (x, y)
         self.capture_radius = capture_radius

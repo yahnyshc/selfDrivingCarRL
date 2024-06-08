@@ -27,13 +27,18 @@ class RaceAI:
 
     def get_checkpoints(self):
         cps = []
-        for i in range(0, 20):
-            if i >= 10:
-                i = i + 10
+        l = len(self.walls)
+        off = int(l/2)
+        off_s = int(off/2)
+        for i in range(0, off):
+            if i >= off_s:
+                i = i + off_s
             x1, y1, x2, y2 = self.walls[i]
-            x3, y3, x4, y4 = self.walls[i + 10]
+            x3, y3, x4, y4 = self.walls[i + off_s]
             c = Checkpoint(((x1 + x3)/2, (y1 + y3)/2))
             cps.append(c)
+            self.screen.blit(pygame.font.SysFont('Comic Sans MS', 10).render(str(i if i < off_s else i - off_s), False, (0, 0, 0)),
+                             ((x1 + x3)/2, (y1 + y3)/2))
             c.draw(self.screen)
         return cps
 
@@ -101,13 +106,13 @@ class RaceAI:
         gameOver = False
         # check for collision
         rc = self.car.raytrace_camera()
+        print("\n\ndistances: " + str(rc))
         if self.car.is_collision(rc):
-            pen = -5
+            pen = -40
             return pen, True, self.distance
 
-        reward += int(self.get_complete_perc(self.car, self.car.nextCheckpoint) * 100)
+        reward += self.get_complete_perc(self.car, self.car.nextCheckpoint) * 100
 
-        print("reward " + str(reward))
         # draw car
         self.car.draw()
 
