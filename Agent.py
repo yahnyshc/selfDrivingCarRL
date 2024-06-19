@@ -1,105 +1,102 @@
-import torch
-import random
+from Brain import Brain
+from ReplayBuffer import ReplayBuffer
+from keras.models import load_model
 import numpy as np
-from collections import deque
-from RaceAI import RaceAI
-from Model import Linear_QNet, QTrainer
-from Helper import plot
-import time
 
-MAX_MEMORY = 100_000
-BATCH_SIZE = 128
-LR = 0.005
+class Agent(object):
+    """Agent interacting with and learning from the environment."""
 
-class Agent:
+    def __init__(self, alpha, gamma, n_actions, epsilon, batch_size,
+                 input_dims, epsilon_dec, epsilon_min,
+                 mem_size, replace_target, fname='model/model.keras'):
+        """
+        Initialize the agent.
 
-    def __init__(self):
-        self.n_games = 0
-        self.epsilon = 0.9  # randomness
-        self.min_epsilon = 0.10
-        self.epsilon_decay = 0.9975
-        self.gamma = 0.985  # discount rate
-        self.memory = deque(maxlen=MAX_MEMORY)
-        self.model = Linear_QNet(5, 16,  12, 5)
-        self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
+        Args:
+            alpha (float): Learning rate.
+            gamma (float): Discount factor.
+            n_actions (int): Number of possible actions.
+            epsilon (float): Exploration rate.
+            batch_size (int): Batch size for training the model.
+            input_dims (tuple): Dimensions of the input state.
+            epsilon_dec (float): Rate at which epsilon is decremented.
+            epsilon_min (float): Minimum value of epsilon.
+            mem_size (int): Size of the memory buffer.
+            replace_target (float): Target for updating the target network.
+            fname (str): File name for saving and loading the model.
+        """
+        self.action_space = [i for i in range(n_actions)]
+        self.n_actions = n_actions
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_dec = epsilon_dec
+        self.epsilon_min = epsilon_min
+        self.batch_size = batch_size
+        self.model_file = fname
+        self.replace_target = replace_target
+        self.memory = ReplayBuffer(mem_size, input_dims, n_actions, discrete=True)
 
-    def get_state(self, game):
-         state = [
-             *game.car.camera_distances
-         ]
+        self.brain_eval = Brain(input_dims, n_actions, alpha, batch_size)
+        self.brain_target = Brain(input_dims, n_actions, alpha, batch_size)
 
-         return np.array(state, dtype=float)
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
-
-    def train_long_memory(self):
-        if len(self.memory) > BATCH_SIZE:
-            mini_sample = random.sample(self.memory, BATCH_SIZE) # list of tuples
-        else:
-            mini_sample = self.memory
-
-        states, actions, rewards, next_states, dones = zip(*mini_sample)
-        self.trainer.train_step(states, actions, rewards, next_states, dones)
-    def train_short_memory(self, state, action, reward, next_state, done):
-        self.trainer.train_step(state, action, reward, next_state, done)
+    def remember(self, state, action, reward, new_state, done):
+        """Store a transition in the memory buffer."""
+        self.memory.store_transition(state, action, reward, new_state, done)
 
     def get_action(self, state):
-        # random moves: tradeoff exploration / exploitation
-        final_move = [0, 0, 0, 0, 0]
-        if random.random() > self.epsilon:
-            move = random.randint(0, 4)
-            final_move[move] = 1
+        """Return the action to be taken based on the current state."""
+        state = np.array(state)
+        state = state[np.newaxis, :]
+
+        rand = np.random.random()
+        if rand < self.epsilon:
+            action = np.random.choice(self.action_space)
         else:
-            state0 = torch.tensor(state, dtype=torch.float)
-            prediction = self.model(state0)
-            move = torch.argmax(prediction).item()
-            final_move[move] = 1
+            actions = self.brain_eval.predict(state)
+            action = np.argmax(actions)
 
-        return final_move
+        return action
 
-def train():
-    plot_scores = []
-    plot_mean_scores = []
-    total_score = 0
-    record = 0
-    agent = Agent()
-    game = RaceAI()
-    while True:
-        game.screen.fill((255, 255, 255))
-        game.draw_walls()
-        # get old state
-        state_old = agent.get_state(game)
-        # get move
-        final_move = agent.get_action(state_old)
-        # perform move and get new state
-        reward, done, score = game.play_step(final_move)
-        state_new = agent.get_state(game)
+    def learn(self):
+        """Train the model using the experiences in the memory buffer."""
+        if self.memory.mem_cntr > self.batch_size:
+            state, action, reward, new_state, done = self.memory.sample_buffer(self.batch_size)
 
-        # train short memory
-        agent.train_short_memory(state_old, final_move, reward, state_new, done)
+            action_values = np.array(self.action_space, dtype=np.int8)
+            action_indices = np.dot(action, action_values)
 
-        # remember
-        agent.remember(state_old, final_move, reward, state_new, done)
-        if done:
-            # train long memory
-            game.reset()
-            agent.n_games += 1
-            agent.epsilon = max(agent.min_epsilon, agent.epsilon_decay * agent.epsilon)
-            # print( "\n\nepsilon: " + str(agent.epsilon) )
-            agent.train_long_memory()
+            q_next = self.brain_target.predict(new_state)
+            q_eval = self.brain_eval.predict(new_state)
+            q_pred = self.brain_eval.predict(state)
 
-            if score > record:
-                record = score
-                agent.model.save()
+            max_actions = np.argmax(q_eval, axis=1)
 
-            print('Game', agent.n_games, 'Score', score, 'Record:', record)
+            q_target = q_pred
 
-            plot_scores.append(score)
-            total_score += score
-            mean_score = total_score / agent.n_games
-            plot_mean_scores.append(mean_score)
-            print(plot_scores, plot_mean_scores)
-            plot(plot_scores, plot_mean_scores)
+            batch_index = np.arange(self.batch_size, dtype=np.int32)
 
-if __name__ == '__main__':
-    train()
+            q_target[batch_index, action_indices] = reward + self.gamma * q_next[
+                batch_index, max_actions.astype(int)] * done
+
+            _ = self.brain_eval.train(state, q_target)
+
+            self.epsilon = max(self.epsilon * self.epsilon_dec, self.epsilon_min)
+
+    def update_network_parameters(self):
+        """Update the target network with the parameters of the evaluation network."""
+        self.brain_target.copy_weights(self.brain_eval)
+
+    def save_model(self):
+        """Save the model to a file."""
+        self.brain_eval.model.save(self.model_file)
+
+    def load_model(self):
+        """Load the model from a file."""
+        self.brain_eval.model = load_model(self.model_file)
+        self.brain_target.model = load_model(self.model_file)
+
+        if self.epsilon == 0.0:
+            self.update_network_parameters()
+
+

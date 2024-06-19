@@ -11,9 +11,8 @@ class Car:
         self.y = self.walls[0][1]
         self.size = (15, 30)
         self.angle = 180
-        self.camera_angles = [-90, -45, 0, 45, 90]
+        self.camera_angles = [-90, -60, -30, 0, 30, 60, 90]
         self.speed = 2
-        self.max_turning = 5
         self.camera_distances = []
         self.MAX_CAMERA_DISTANCE = 60
         self.nextCheckpoint = 1
@@ -24,37 +23,30 @@ class Car:
         self.image = pygame.transform.scale(self.image, self.size)
         self.raytrace_camera()
 
-    # reset the Car initial state
+    # reset the Car initial position
     def reset(self):
         self.x = self.walls[0][0] + 18
         self.y = self.walls[0][1]
         self.nextCheckpoint = 1
         self.angle = 180
 
+    def get_state(self):
+        return self.camera_distances
+
     # Move the car forward and turn it in the direction of movement
     # action is array of size 11 with the distribution of actions
     def move(self, action):
-        speed, angle = 0, 0
-        if action[0]:
-            speed, angle = 0, -1
-        elif action[1]:
-            speed, angle = 1, -1
-        elif action[2]:
-            speed, angle = 1, 0
-        elif action[3]:
-            speed, angle = 1, 1
-        elif action[4]:
-            speed, angle = 0, 1
-        # find index of maximum element in action array
-        self.speed = speed
-        self.angle += angle
+        actions = [(2, 0), (1, -1), (1, 1), (1, -2), (1, 2)]
+        #actions = [(1,-2), (2,-1), (3,0), (2,1), (1,2)]
+        self.speed = actions[action][0]
+        self.angle += actions[action][1]
         (old_x, old_y) = (self.x, self.y)
         self.x -= self.speed * math.sin(math.radians(self.angle))
         self.y -= self.speed * math.cos(math.radians(self.angle))
         return self.distance((old_x, old_y), (self.x, self.y))
 
 
-    def CheckpointCaptured(self):
+    def checkpoint_captured(self):
         self.nextCheckpoint += 1
 
     # get center of the car coordinates
@@ -64,7 +56,7 @@ class Car:
     # Draw car on the screen under angle
     def draw(self):
         car1 = pygame.transform.rotate(self.image, self.angle)
-        car_rect = car1.get_rect(center = self.get_centre())
+        car_rect = car1.get_rect(center=self.get_centre())
         self.screen.blit(car1, car_rect)
 
     # detect whether the car crosses checkpoint
@@ -94,13 +86,7 @@ class Car:
     # detect whether the car collides the wall segment
     def is_collision(self, raytrace_output):
         for i in range(len(raytrace_output)):
-            # if i == 0 or i == len(raytrace_output) - 1:
-            #     dist = 2
-            # elif i == 1 or i == len(raytrace_output) - 2:
-            #     dist = 2
-            # else:
-            #     dist = 2
-            if raytrace_output[i] < 2:
+            if raytrace_output[i] < 0.04:
                 return True
         return False
 
@@ -170,21 +156,45 @@ class Car:
         for (cx1, cy1), (cx2, cy2) in self.get_cameras():
             camera_s, camera_e = self.rotate_line_around((cx1, cy1), (cx2, cy2), self.get_centre(), self.angle)
             f = False
+            max_distance = self.MAX_CAMERA_DISTANCE - self.distance(self.get_centre(), camera_s)
             for x1, y1, x2, y2 in self.walls:
                 start, end = (x1, y1), (x2, y2)
                 rt = self.raytrace(start, end, camera_s, camera_e)
                 if rt:
-                    pygame.draw.line(self.screen, (0, 255, 0), camera_s, rt, 1)
-                    d = self.distance(camera_s, rt)
-                    output.append(d)
+                    d = self.distance(camera_s, rt) / max_distance
+                    output.append(min(round(d, 2), 1))
                     f = True
                     break
             if not f:
-                pygame.draw.line(self.screen, (0, 255, 0), camera_s, camera_e, 1)
-                d = self.distance(camera_s, camera_e)
-                output.append(d)
+                d = self.distance(camera_s, camera_e) / max_distance
+                output.append(min(round(d, 2), 1))
         self.camera_distances = output
         return output
+
+
+    def distance_to_color(self, distance):
+        blue = 0
+        green = int(255 * math.sqrt(math.cos(distance * math.pi / 200)))
+        red = int(255 * math.sqrt(math.sin(distance * math.pi / 200)))
+        return (red, green, blue)
+
+
+    def draw_cameras(self):
+        for (cx1, cy1), (cx2, cy2) in self.get_cameras():
+            camera_s, camera_e = self.rotate_line_around((cx1, cy1), (cx2, cy2), self.get_centre(), self.angle)
+            f = False
+            max_distance = self.MAX_CAMERA_DISTANCE - self.distance(self.get_centre(), camera_s)
+            for x1, y1, x2, y2 in self.walls:
+                start, end = (x1, y1), (x2, y2)
+                rt = self.raytrace(start, end, camera_s, camera_e)
+                if rt:
+                    d = max(1, 100 - (self.distance(camera_s, rt) / max_distance) * 100)
+                    pygame.draw.line(self.screen, self.distance_to_color(d), camera_s, rt, 1)
+                    f = True
+                    break
+            if not f:
+                d = max(1, 100 - (self.distance(camera_s, camera_e) / max_distance) * 100)
+                pygame.draw.line(self.screen, self.distance_to_color(d), camera_s, camera_e, 1)
 
 
 
