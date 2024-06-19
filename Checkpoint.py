@@ -49,6 +49,6 @@ class Checkpoint:
             screen (pygame.Surface): The surface to draw the checkpoint on.
         """
         if self.is_visible:
-            pygame.draw.circle(screen, (255, 0, 0), (int(self.position[0]), int(self.position[1])),
+            pygame.draw.circle(screen, (255, 255, 255), (int(self.position[0]), int(self.position[1])),
                                int(self.capture_radius), 1)
 

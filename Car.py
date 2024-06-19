@@ -7,9 +7,9 @@ class Car:
     def __init__(self, screen):
         self.screen = screen
         self.walls = DataLoader().get_walls()
-        self.x = self.walls[0][0] + 18
+        self.x = self.walls[0][0] + 30
         self.y = self.walls[0][1]
-        self.size = (15, 30)
+        self.size = (18, 36)
         self.angle = 180
         self.camera_angles = [-90, -60, -30, 0, 30, 60, 90]
         self.speed = 2
@@ -18,7 +18,7 @@ class Car:
         self.nextCheckpoint = 1
 
         # Load car image
-        self.image = pygame.image.load("img/car.png")
+        self.image = pygame.image.load("img/car3.png")
         # Make car smaller proportionally to the image
         self.image = pygame.transform.scale(self.image, self.size)
         self.raytrace_camera()
@@ -43,7 +43,7 @@ class Car:
         (old_x, old_y) = (self.x, self.y)
         self.x -= self.speed * math.sin(math.radians(self.angle))
         self.y -= self.speed * math.cos(math.radians(self.angle))
-        return self.distance((old_x, old_y), (self.x, self.y))
+        return self.distance_between_points((old_x, old_y), (self.x, self.y))
 
 
     def checkpoint_captured(self):
@@ -51,13 +51,13 @@ class Car:
 
     # get center of the car coordinates
     def get_centre(self):
-        return (self.x+self.size[0]/2, self.y+self.size[1]/2)
+        return self.x+self.size[0]/2, self.y+self.size[1]/2
 
     # Draw car on the screen under angle
     def draw(self):
-        car1 = pygame.transform.rotate(self.image, self.angle)
-        car_rect = car1.get_rect(center=self.get_centre())
-        self.screen.blit(car1, car_rect)
+        car = pygame.transform.rotate(self.image, self.angle)
+        car_rect = car.get_rect(center=self.get_centre())
+        self.screen.blit(car, car_rect)
 
     # detect whether the car crosses checkpoint
     def crosses_checkpoint(self, checkpoint):
@@ -91,7 +91,7 @@ class Car:
         return False
 
 
-    def rotate(self, origin, point, angle):
+    def rotate_point(self, origin, point, angle):
         """
         Rotate a point counterclockwise by a given angle around a given origin.
 
@@ -106,7 +106,7 @@ class Car:
     # rotate line around the point counterclockwise
     def rotate_line_around(self, start, end, origin, angle):
         rad = math.radians(angle)
-        return self.rotate(origin, start, rad), self.rotate(origin, end, rad)
+        return self.rotate_point(origin, start, rad), self.rotate_point(origin, end, rad)
 
     # function to get an array of cameras starting at edges of the car and ending under 90, 45 and 0 degrees
     def get_cameras(self):
@@ -146,7 +146,7 @@ class Car:
             return i
         return None
 
-    def distance(self, p1, p2):
+    def distance_between_points(self, p1, p2):
         # distance between p1 and p2
         return math.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2)
 
@@ -156,17 +156,17 @@ class Car:
         for (cx1, cy1), (cx2, cy2) in self.get_cameras():
             camera_s, camera_e = self.rotate_line_around((cx1, cy1), (cx2, cy2), self.get_centre(), self.angle)
             f = False
-            max_distance = self.MAX_CAMERA_DISTANCE - self.distance(self.get_centre(), camera_s)
+            max_distance = self.MAX_CAMERA_DISTANCE - self.distance_between_points(self.get_centre(), camera_s)
             for x1, y1, x2, y2 in self.walls:
                 start, end = (x1, y1), (x2, y2)
                 rt = self.raytrace(start, end, camera_s, camera_e)
                 if rt:
-                    d = self.distance(camera_s, rt) / max_distance
+                    d = self.distance_between_points(camera_s, rt) / max_distance
                     output.append(min(round(d, 2), 1))
                     f = True
                     break
             if not f:
-                d = self.distance(camera_s, camera_e) / max_distance
+                d = self.distance_between_points(camera_s, camera_e) / max_distance
                 output.append(min(round(d, 2), 1))
         self.camera_distances = output
         return output
@@ -183,17 +183,17 @@ class Car:
         for (cx1, cy1), (cx2, cy2) in self.get_cameras():
             camera_s, camera_e = self.rotate_line_around((cx1, cy1), (cx2, cy2), self.get_centre(), self.angle)
             f = False
-            max_distance = self.MAX_CAMERA_DISTANCE - self.distance(self.get_centre(), camera_s)
+            max_distance = self.MAX_CAMERA_DISTANCE - self.distance_between_points(self.get_centre(), camera_s)
             for x1, y1, x2, y2 in self.walls:
                 start, end = (x1, y1), (x2, y2)
                 rt = self.raytrace(start, end, camera_s, camera_e)
                 if rt:
-                    d = max(1, 100 - (self.distance(camera_s, rt) / max_distance) * 100)
+                    d = max(1, 100 - int((self.distance_between_points(camera_s, rt) / max_distance) * 100))
                     pygame.draw.line(self.screen, self.distance_to_color(d), camera_s, rt, 1)
                     f = True
                     break
             if not f:
-                d = max(1, 100 - (self.distance(camera_s, camera_e) / max_distance) * 100)
+                d = max(1, 100 - int((self.distance_between_points(camera_s, camera_e) / max_distance) * 100))
                 pygame.draw.line(self.screen, self.distance_to_color(d), camera_s, camera_e, 1)
 
 

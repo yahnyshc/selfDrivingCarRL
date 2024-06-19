@@ -17,6 +17,7 @@ class Environment:
         pygame.init()
         pygame.display.set_caption("Self driving car")
         self.screen = pygame.display.set_mode((1000, 700))
+        self.background_img = pygame.image.load("img/path1.png")
         self.debugging = debugging
         self.walls = DataLoader().get_walls()
         self.checkpoints = self.get_checkpoints()
@@ -42,18 +43,15 @@ class Environment:
         """
         cps = []
         off = int(len(self.walls)/2)
-        off_s = int(off/2)
         for i in range(0, off):
-            if i >= off_s:
-                i = i + off_s
             x1, y1, x2, y2 = self.walls[i]
-            x3, y3, x4, y4 = self.walls[i + off_s]
+            x3, y3, x4, y4 = self.walls[i + off]
             c = Checkpoint(((x1 + x3)/2, (y1 + y3)/2))
             cps.append(c)
             if self.debugging:
                 self.screen.blit(
-                    pygame.font.SysFont('Comic Sans MS', 10).render(str(i if i < off_s else i - off_s),
-                    False, (0, 0, 0)),((x1 + x3)/2, (y1 + y3)/2)
+                    pygame.font.SysFont('Comic Sans MS', 10).render(str(i),
+                    False, (255, 0, 0)),((x1 + x3)/2, (y1 + y3)/2)
                 )
                 c.draw(self.screen)
         return cps
@@ -103,18 +101,14 @@ class Environment:
         check_point_distance = self.vector2_distance((car.x, car.y), self.checkpoints[cur_checkpoint_index].position)
 
         # Check if checkpoint can be captured
-        if check_point_distance <= self.checkpoints[cur_checkpoint_index].capture_radius:
+        if check_point_distance <= self.checkpoints[cur_checkpoint_index].capture_radius + 10:
             self.car.checkpoint_captured()
             return self.get_captured_checkpoint(car, cur_checkpoint_index + 1)  # Recursively check next checkpoint
         else:
-            if self.debugging:
-                self.screen.blit(
-                    pygame.font.SysFont('Comic Sans MS', 30).render(str(cur_checkpoint_index),
-                    False, (0, 0, 0)), (0, 50)
-                )
             # Return accumulated reward of last checkpoint + reward of distance to next checkpoint
             # return self.checkpoints[cur_checkpoint_index - 1].accumulated_reward + self.checkpoints[cur_checkpoint_index].get_reward_value(check_point_distance)
-            # return checkpoint index instead of completion percentage
+
+            # Return checkpoint index instead of completion percentage
             return cur_checkpoint_index
 
     @staticmethod
@@ -173,7 +167,7 @@ class Environment:
             reward (float): The reward.
             epsilon (float): The epsilon value.
         """
-        self.screen.fill((255, 255, 255))
+        self.screen.blit(self.background_img, (0, 0))
         self.draw_walls()
 
         # draw car
@@ -186,12 +180,12 @@ class Environment:
         if self.debugging:
             self.screen.blit(
                 pygame.font.SysFont('Comic Sans MS', 20).render("Reward: "+str(reward),
-                False, (0, 0, 0)), (5, 10)
+                False, (255, 255, 255)), (450, 10)
             )
 
             self.screen.blit(
                 pygame.font.SysFont('Comic Sans MS', 20).render("Randomness: "+str(round(epsilon, 4)),
-                False, (0, 0, 0)),(5, 30)
+                False, (255, 255, 255)),(450, 30)
             )
 
         # update ui and clock

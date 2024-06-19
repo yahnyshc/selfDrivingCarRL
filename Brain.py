@@ -3,6 +3,7 @@ from keras.models import Sequential
 from keras.optimizers import Adam
 import tensorflow as tf
 
+
 class Brain:
     def __init__(self, NbrStates, NbrActions, alpha, batch_size=256):
         """

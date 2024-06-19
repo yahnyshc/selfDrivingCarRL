@@ -11,7 +11,7 @@ class SingletonMeta(type):
 
 class DataLoader(metaclass=SingletonMeta):
     def __init__(self):
-        self.walls = self.load_walls("params/walls.txt")
+        self.walls = self.load_walls("maps/path1.txt")
 
     def get_walls(self):
         return self.walls
