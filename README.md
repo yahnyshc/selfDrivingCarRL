@@ -1,6 +1,6 @@
 # Self-Driving Car Reinforcement Learning Project
 
-Welcome to our self-driving car reinforcement learning project! This project aims to train an autonomous agent to navigate a complex racing environment using reinforcement learning techniques.
+Welcome to my self-driving car reinforcement learning project! This project aims to train an autonomous agent to navigate a complex racing environment using reinforcement learning techniques.
 
 ## Features:
 - Utilizes Deep Q-Learning algorithm for training the agent
