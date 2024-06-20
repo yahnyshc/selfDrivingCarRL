@@ -19,11 +19,9 @@ class DataLoader(metaclass=SingletonMeta):
     @staticmethod
     def load_walls(filename):
         walls = []
-        with open(filename, "r") as f:
-            # Skip the first line
+        with open(filename) as f:
             next(f)
-
             for line in f:
-                x1, y1, x2, y2 = map(int, line.strip().split(","))
-                walls.append((x1, y1, x2, y2))
+                (x1, y1), (x2, y2) = map(lambda x: x.split(","), line.split(" "))
+                walls.append((float(x1), float(y1), float(x2), float(y2)))
         return walls

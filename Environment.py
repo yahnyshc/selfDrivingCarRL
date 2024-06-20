@@ -1,9 +1,11 @@
+import random
+
 import pygame
 from Car import Car
 from DataLoader import DataLoader
 from Checkpoint import Checkpoint
 import math
-
+import os
 
 class Environment:
 
@@ -14,6 +16,8 @@ class Environment:
         Args:
             debugging (bool): Whether to enable debugging mode.
         """
+        # remove this line if not windows is used
+        os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (920, 100)
         pygame.init()
         pygame.display.set_caption("Self driving car")
         self.screen = pygame.display.set_mode((1000, 700))
@@ -51,9 +55,9 @@ class Environment:
             if self.debugging:
                 self.screen.blit(
                     pygame.font.SysFont('Comic Sans MS', 10).render(str(i),
-                    False, (255, 0, 0)),((x1 + x3)/2, (y1 + y3)/2)
+                    False, (255, 0, 0)),((x1 + x3)/2-5, (y1 + y3)/2-10)
                 )
-                c.draw(self.screen)
+                #c.draw(self.screen)
         return cps
 
     def calculate_checkpoint_percentages(self):
@@ -125,7 +129,7 @@ class Environment:
         """
         return math.sqrt((position2[0] - position1[0]) ** 2 + (position2[1] - position1[1]) ** 2)
 
-    def step(self, action=0):
+    def step(self, action):
         """
         Take a step in the environment.
 
@@ -145,7 +149,7 @@ class Environment:
         game_over = False
 
         # check for collision
-        rc = self.car.raytrace_camera()
+        rc = self.car.raytrace_cameras()
         if self.car.is_collision(rc):
             pen = -1
             game_over = True
@@ -168,14 +172,18 @@ class Environment:
             epsilon (float): The epsilon value.
         """
         self.screen.blit(self.background_img, (0, 0))
-        self.draw_walls()
+
+        if self.debugging:
+            self.draw_walls()
+
+        self.get_checkpoints()
 
         # draw car
         self.car.draw()
 
-        self.car.draw_cameras()
-
-        self.get_checkpoints()
+        if self.debugging:
+            self.car.draw_cameras()
+            self.car.draw_LiDAR()
 
         if self.debugging:
             self.screen.blit(

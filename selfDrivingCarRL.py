@@ -1,4 +1,3 @@
-
 # Import necessary libraries
 import pygame
 import numpy as np
@@ -22,10 +21,10 @@ LR = 0.001  # Learning rate for the optimizer
 # Initialize the agent
 agent = Agent(alpha=LR,  # Learning rate
               gamma=0.99,  # Discount factor
-              n_actions=5,  # Number of actions
+              n_actions=7,  # Number of actions
               epsilon=1.00 if training else 0.00,  # Exploration rate
               epsilon_min=0.10 if training else 0.00,  # Minimum exploration rate
-              epsilon_dec=0.9996,  # Exponential decay rate for exploration rate
+              epsilon_dec=0.9997,  # Exponential decay rate for exploration rate
               replace_target=REPLACE_TARGET,  # Frequency to update the target network
               batch_size=BATCH_SIZE,  # Batch size for training the model
               mem_size=MAX_MEMORY,  # Maximum number of experiences stored in the memory
@@ -56,7 +55,6 @@ def start():
         nonlocal n_games, record
         agent.save_model()
         training = not training
-        n_games = 1
         record = 0
 
     while True:
@@ -64,7 +62,8 @@ def start():
 
         score = 0  # Initialize the game score
 
-        reward, done = game.step(0)
+        action = agent.get_action(game.car.raytrace_cameras())
+        reward, done = game.step(action)
         state_ = game.car.get_state()
         state = np.array(state_)
 
@@ -99,7 +98,7 @@ def start():
             agent.update_network_parameters()
 
         if training:
-            if score > record and n_games > 5:
+            if score > record and n_games % 5 == 0:
                 record = score
                 agent.save_model()
                 print("Record beaten. Saved model.")
