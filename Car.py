@@ -354,9 +354,9 @@ class Car:
         # Return the distances
         return output
 
-    def distance_to_color(self, distance):
+    def percentage_to_color(self, distance):
         """
-        Compute color based on distance.
+        Compute color based on percentage.
 
         This function takes a distance and returns a tuple of RGB values. The
         color is computed based on the cosine and sine of distance multiplied
@@ -364,11 +364,12 @@ class Car:
         as distance increases.
 
         :param distance: The distance to compute the color for.
-        :type distance: float
+        :type distance: int
         :return: A tuple of RGB values.
         :rtype: tuple
         """
         # Compute blue and green values
+        distance = max(1, 100 - distance)
         green = int(255 * math.sqrt(math.cos(distance * math.pi / 200)))
         blue = 0
 
@@ -396,16 +397,16 @@ class Car:
                 rt = self.raytrace(start, end, camera_s, camera_e)
                 if rt:
                     # Compute the distance as a percentage of the maximum distance
-                    d = max(1, 100 - int((self.distance_between_points(camera_s, rt) / max_distance) * 100))
+                    d = int((self.distance_between_points(camera_s, rt) / max_distance) * 100)
                     # Draw the line between the camera and the wall
-                    pygame.draw.line(self.screen, self.distance_to_color(d), camera_s, rt, 1)
+                    pygame.draw.line(self.screen, self.percentage_to_color(d), camera_s, rt, 1)
                     f = True
                     break
             if not f:
                 # Compute the distance to the end point of the camera
-                d = max(1, 100 - int((self.distance_between_points(camera_s, camera_e) / max_distance) * 100))
+                d = int((self.distance_between_points(camera_s, camera_e) / max_distance) * 100)
                 # Draw the line between the camera and the end point
-                pygame.draw.line(self.screen, self.distance_to_color(d), camera_s, camera_e, 1)
+                pygame.draw.line(self.screen, self.percentage_to_color(d), camera_s, camera_e, 1)
 
     def draw_LiDAR(self):
         """
@@ -466,8 +467,8 @@ class Car:
                 # Compute the average distance between the points
                 avg_distance = (distances[j] + distances[j + 1]) / 2
                 # Compute the average color based on the distance
-                avg_distance = max(1, 100 - int(avg_distance * 100))
-                avg_color = self.distance_to_color(avg_distance)
+                avg_distance = int(avg_distance * 100)
+                avg_color = self.percentage_to_color(avg_distance)
                 # Draw the line between the detection points
                 pygame.draw.line(
                     self.screen, avg_color, camera_points[j][i], camera_points[j + 1][i], 1)

@@ -92,7 +92,7 @@ def start():
 
             score = max(reward, score)
 
-            game.render(reward, agent.epsilon)
+            game.render(action, reward, agent.epsilon)
 
         if n_games % REPLACE_TARGET == 0 and n_games > REPLACE_TARGET:
             agent.update_network_parameters()

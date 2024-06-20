@@ -16,8 +16,6 @@ class Environment:
         Args:
             debugging (bool): Whether to enable debugging mode.
         """
-        # remove this line if not windows is used
-        os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (920, 100)
         pygame.init()
         pygame.display.set_caption("Self driving car")
         self.screen = pygame.display.set_mode((1000, 700))
@@ -29,6 +27,10 @@ class Environment:
         self.clock = pygame.time.Clock()
         self.car = Car(self.screen)
         self.distance = 0
+        self.steering_angle = 0
+        self.steering_wheel = pygame.image.load("img/wheel.png")
+        # Resize the car image to the specified size
+        self.steering_wheel = pygame.transform.scale(self.steering_wheel, (50, 50))
         self.reset()
 
     def draw_walls(self):
@@ -115,6 +117,16 @@ class Environment:
             # Return checkpoint index instead of completion percentage
             return cur_checkpoint_index
 
+    def get_completion_percentage(self, checkpoint):
+        """
+        Calculate the completion percentage of the track.
+
+        Returns:
+            float: The completion percentage.
+        """
+        return (self.checkpoints[checkpoint - 1].accumulated_reward +
+                self.checkpoints[checkpoint].get_reward_value(checkpoint))
+
     @staticmethod
     def vector2_distance(position1, position2):
         """
@@ -163,18 +175,19 @@ class Environment:
 
         return reward, game_over
 
-    def render(self, reward, epsilon):
+    def render(self, action, reward, epsilon):
         """
         Render the environment.
 
         Args:
+            action (float): The action taken.
             reward (float): The reward.
             epsilon (float): The epsilon value.
         """
         self.screen.blit(self.background_img, (0, 0))
 
-        if self.debugging:
-            self.draw_walls()
+        # if self.debugging:
+        #     self.draw_walls()
 
         self.get_checkpoints()
 
@@ -187,14 +200,41 @@ class Environment:
 
         if self.debugging:
             self.screen.blit(
-                pygame.font.SysFont('Comic Sans MS', 20).render("Reward: "+str(reward),
-                False, (255, 255, 255)), (450, 10)
+                pygame.font.SysFont('Comic Sans MS', 15).render("Reward: "+str(reward),
+                False, (255, 255, 255)), (430, 10)
             )
 
             self.screen.blit(
-                pygame.font.SysFont('Comic Sans MS', 20).render("Randomness: "+str(round(epsilon, 4)),
-                False, (255, 255, 255)),(450, 30)
+                pygame.font.SysFont('Comic Sans MS', 15).render("Randomness: "+str(round(epsilon, 4)),
+                False, (255, 255, 255)),(430, 30)
             )
+
+        if self.car.nextCheckpoint != len(self.checkpoints):
+            completion = round(self.get_completion_percentage(self.car.nextCheckpoint), 2)
+            self.screen.blit(
+            pygame.font.SysFont('Comic Sans MS', 15).
+                render(str(round(completion*100, 2)) + "%",
+                False, (255, 255, 255)),(470, 670)
+            )
+
+            pygame.draw.rect(
+                self.screen,
+                self.car.percentage_to_color(int(completion*100)), pygame.Rect(0, 695, 1000*completion, 5)
+            )
+
+        # rotate car steering wheel and print on the screen
+        angle = self.car.actions[action][1] * 2
+        turn = -int(self.steering_angle / 30)
+        if turn == 0:
+            if self.steering_angle < 0:
+                turn = 1
+            elif self.steering_angle > 0:
+                turn = -1
+        self.steering_angle += (angle + turn)
+        wheel = pygame.transform.rotate(self.steering_wheel, self.steering_angle)
+
+        wheel_rect = wheel.get_rect(center=(950, 50))
+        self.screen.blit(wheel, wheel_rect)
 
         # update ui and clock
         pygame.display.update()

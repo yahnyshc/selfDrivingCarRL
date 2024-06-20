@@ -23,5 +23,5 @@ class DataLoader(metaclass=SingletonMeta):
             next(f)
             for line in f:
                 (x1, y1), (x2, y2) = map(lambda x: x.split(","), line.split(" "))
-                walls.append((float(x1), float(y1), float(x2), float(y2)))
+                walls.append((round(float(x1)), round(float(y1)), round(float(x2)), round(float(y2))))
         return walls
