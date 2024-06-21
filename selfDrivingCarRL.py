@@ -89,6 +89,9 @@ def start():
                     if event.key == pygame.K_d:
                         # Set the debug mode
                         game.debugging = not game.debugging
+                    if event.key == pygame.K_r:
+                        # Reset the game
+                        done = True
 
             score = max(reward, score)
 

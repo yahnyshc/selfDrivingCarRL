@@ -24,7 +24,7 @@ class Car:
         self.walls = DataLoader().get_walls()
 
         # Set the initial position of the car to the first wall
-        self.x = self.walls[0][0] + 20
+        self.x = self.walls[0][0] + 30
         self.y = self.walls[0][1]
 
         # Set the size of the car
@@ -54,7 +54,7 @@ class Car:
         self.MAX_CAMERA_DISTANCE = 60
 
         # Initialize the next checkpoint counter
-        self.nextCheckpoint = 1
+        self.next_checkpoint = 1
 
         # Load the car image
         self.image = pygame.image.load("img/car3.png")
@@ -71,11 +71,11 @@ class Car:
         It also sets the angle of the car to 180 degrees and resets the next checkpoint counter to 1.
         """
         # Reset the car's position to the first wall
-        self.x = self.walls[0][0] + 20
+        self.x = self.walls[0][0] + 30
         self.y = self.walls[0][1]
 
         # Reset the next checkpoint counter
-        self.nextCheckpoint = 1
+        self.next_checkpoint = 1
 
         # Set the angle of the car to 180 degrees
         self.angle = 180
@@ -120,14 +120,14 @@ class Car:
         Increment the counter for the next checkpoint to be captured.
 
         This function is called when a checkpoint is captured by the car. It
-        increments the 'nextCheckpoint' counter to keep track of the next
+        increments the 'next_checkpoint' counter to keep track of the next
         checkpoint to be visited.
 
         Returns:
             None
         """
         # Increment the counter for the next checkpoint to be captured
-        self.nextCheckpoint += 1
+        self.next_checkpoint += 1
 
     def get_centre(self):
         """
@@ -329,7 +329,7 @@ class Car:
         output = []
         # Iterate over each camera
         for camera_s, camera_e in self.get_cameras():
-            f = False
+            flag = False
             # Compute the maximum distance to the camera
             max_distance = self.MAX_CAMERA_DISTANCE - self.distance_between_points(self.get_centre(), camera_s)
             # Iterate over each wall
@@ -342,9 +342,9 @@ class Car:
                     d = self.distance_between_points(camera_s, rt) / max_distance
                     # Append the distance to the output list
                     output.append(min(round(d, 2), 1))
-                    f = True
+                    flag = True
                     break
-            if not f:
+            if not flag:
                 # Compute the distance to the end point of the camera
                 d = self.distance_between_points(camera_s, camera_e) / max_distance
                 # Append the distance to the output list
@@ -387,7 +387,7 @@ class Car:
         It then draws the lines between the cameras and the walls on the screen.
         """
         for camera_s, camera_e in self.get_cameras():
-            f = False
+            flag = False
             # Compute the maximum distance to the camera
             max_distance = self.MAX_CAMERA_DISTANCE - self.distance_between_points(self.get_centre(), camera_s)
             # Iterate over each wall
@@ -400,9 +400,9 @@ class Car:
                     d = int((self.distance_between_points(camera_s, rt) / max_distance) * 100)
                     # Draw the line between the camera and the wall
                     pygame.draw.line(self.screen, self.percentage_to_color(d), camera_s, rt, 1)
-                    f = True
+                    flag = True
                     break
-            if not f:
+            if not flag:
                 # Compute the distance to the end point of the camera
                 d = int((self.distance_between_points(camera_s, camera_e) / max_distance) * 100)
                 # Draw the line between the camera and the end point
@@ -443,32 +443,33 @@ class Car:
             return points
 
         # Iterate over each camera
-        for camera_s, camera_e in self.get_cameras():
-            f = False
-            max_distance = self.MAX_CAMERA_DISTANCE - self.distance_between_points(self.get_centre(), camera_s)
-            # Iterate over each wall
-            for x1, y1, x2, y2 in self.walls:
-                start, end = (x1, y1), (x2, y2)
-                rt = self.raytrace(start, end, camera_s, camera_e)
-                if rt:
-                    # Compute the detection points and distances
-                    camera_points.append(getPoints(camera_s, rt))
-                    distances.append(self.distance_between_points(camera_s, rt) / max_distance)
-                    f = True
-                    break
-            if not f:
-                # Compute the distance and detection points for the camera points
-                distances.append(self.distance_between_points(camera_s, camera_e) / max_distance)
-                camera_points.append(getPoints(camera_s, camera_e))
-
-        # Iterate over each point pair and draw the lines
         for i in range(1, n):
-            for j in range(len(camera_points) - 1):
-                # Compute the average distance between the points
-                avg_distance = (distances[j] + distances[j + 1]) / 2
-                # Compute the average color based on the distance
-                avg_distance = int(avg_distance * 100)
-                avg_color = self.percentage_to_color(avg_distance)
-                # Draw the line between the detection points
-                pygame.draw.line(
-                    self.screen, avg_color, camera_points[j][i], camera_points[j + 1][i], 1)
+            j = 0
+            for camera_s, camera_e in self.get_cameras():
+                flag = False
+                max_distance = self.MAX_CAMERA_DISTANCE - self.distance_between_points(self.get_centre(), camera_s)
+                # Iterate over each wall
+                for x1, y1, x2, y2 in self.walls:
+                    start, end = (x1, y1), (x2, y2)
+                    rt = self.raytrace(start, end, camera_s, camera_e)
+                    if rt:
+                        # Compute the detection points and distances
+                        camera_points.append(getPoints(camera_s, rt))
+                        distances.append(self.distance_between_points(camera_s, rt) / max_distance)
+                        flag = True
+                        break
+                if not flag:
+                    # Compute the distance and detection points for the camera points
+                    distances.append(self.distance_between_points(camera_s, camera_e) / max_distance)
+                    camera_points.append(getPoints(camera_s, camera_e))
+
+                if j >= 1:
+                    avg_distance = (distances[j] + distances[j - 1]) / 2
+                    # Compute the average color based on the distance
+                    avg_distance = int(avg_distance * 100)
+                    avg_color = self.percentage_to_color(avg_distance)
+                    # Draw the line between the detection points
+                    pygame.draw.line(
+                        self.screen, avg_color, camera_points[j][i], camera_points[j - 1][i], 1)
+
+                j += 1

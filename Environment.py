@@ -1,11 +1,11 @@
-import random
-
 import pygame
 from Car import Car
 from DataLoader import DataLoader
 from Checkpoint import Checkpoint
 import math
-import os
+
+WIDTH = 1000
+HEIGHT = 700
 
 class Environment:
 
@@ -18,7 +18,7 @@ class Environment:
         """
         pygame.init()
         pygame.display.set_caption("Self driving car")
-        self.screen = pygame.display.set_mode((1000, 700))
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         self.background_img = pygame.image.load("img/path1.png")
         self.debugging = debugging
         self.walls = DataLoader().get_walls()
@@ -55,11 +55,12 @@ class Environment:
             c = Checkpoint(((x1 + x3)/2, (y1 + y3)/2))
             cps.append(c)
             if self.debugging:
-                self.screen.blit(
-                    pygame.font.SysFont('Comic Sans MS', 10).render(str(i),
+                if i != off-1:
+                    self.screen.blit(
+                        pygame.font.SysFont('Comic Sans MS', 10).render(str(i),
                     False, (255, 0, 0)),((x1 + x3)/2-5, (y1 + y3)/2-10)
-                )
-                #c.draw(self.screen)
+                    )
+                    #c.draw(self.screen)
         return cps
 
     def calculate_checkpoint_percentages(self):
@@ -101,7 +102,7 @@ class Environment:
         """
         # Already all checkpoints captured
         if cur_checkpoint_index >= len(self.checkpoints):
-            return 1
+            return 0
 
         # Calculate distance to next checkpoint
         check_point_distance = self.vector2_distance((car.x, car.y), self.checkpoints[cur_checkpoint_index].position)
@@ -167,10 +168,10 @@ class Environment:
             game_over = True
             return pen, game_over
 
-        checkpoint_captured = self.get_captured_checkpoint(self.car, self.car.nextCheckpoint)
+        checkpoint_captured = self.get_captured_checkpoint(self.car, self.car.next_checkpoint)
         reward += checkpoint_captured - 1
 
-        if self.car.nextCheckpoint == len(self.checkpoints):
+        if checkpoint_captured == 0:
             game_over = True
 
         return reward, game_over
@@ -191,49 +192,52 @@ class Environment:
 
         self.get_checkpoints()
 
-        # draw car
-        self.car.draw()
-
+        # draw the sensors
         if self.debugging:
             self.car.draw_cameras()
             self.car.draw_LiDAR()
 
+        # draw car
+        self.car.draw()
+
         if self.debugging:
             self.screen.blit(
                 pygame.font.SysFont('Comic Sans MS', 15).render("Reward: "+str(reward),
-                False, (255, 255, 255)), (430, 10)
+                False, (255, 255, 255)), (WIDTH/2-60, 10)
             )
 
             self.screen.blit(
                 pygame.font.SysFont('Comic Sans MS', 15).render("Randomness: "+str(round(epsilon, 4)),
-                False, (255, 255, 255)),(430, 30)
+                False, (255, 255, 255)),(WIDTH/2-60, 30)
             )
 
-        if self.car.nextCheckpoint != len(self.checkpoints):
-            completion = round(self.get_completion_percentage(self.car.nextCheckpoint), 2)
+        try:
+            completion = round(self.get_completion_percentage(self.car.next_checkpoint), 2)
             self.screen.blit(
             pygame.font.SysFont('Comic Sans MS', 15).
                 render(str(round(completion*100, 2)) + "%",
-                False, (255, 255, 255)),(470, 670)
+                False, (255, 255, 255)),(WIDTH/2-10, HEIGHT-30)
             )
 
             pygame.draw.rect(
                 self.screen,
                 self.car.percentage_to_color(int(completion*100)), pygame.Rect(0, 695, 1000*completion, 5)
             )
+        except:
+            pass
 
         # rotate car steering wheel and print on the screen
         angle = self.car.actions[action][1] * 2
-        turn = -int(self.steering_angle / 30)
-        if turn == 0:
+        resistance = -int(self.steering_angle / 30)
+        if resistance == 0:
             if self.steering_angle < 0:
-                turn = 1
+                resistance = 1
             elif self.steering_angle > 0:
-                turn = -1
-        self.steering_angle += (angle + turn)
+                resistance = -1
+        self.steering_angle += (angle + resistance)
         wheel = pygame.transform.rotate(self.steering_wheel, self.steering_angle)
 
-        wheel_rect = wheel.get_rect(center=(950, 50))
+        wheel_rect = wheel.get_rect(center=(WIDTH-50, 50))
         self.screen.blit(wheel, wheel_rect)
 
         # update ui and clock
@@ -245,5 +249,6 @@ class Environment:
         Reset the environment.
         """
         self.distance = 0
+        self.steering_angle = 0
         self.car.reset()
 
