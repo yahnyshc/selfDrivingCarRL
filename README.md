@@ -19,4 +19,11 @@ Welcome to my self-driving car reinforcement learning project! This project aims
 Feel free to explore the codebase and experiment with different hyperparameters to see how the agent learns to drive autonomously!
 
 # Demo
-![Untitled video - Made with Clipchamp (1)](https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/de5200a4-c749-4b25-bfd9-cf1f65fde30f)
+![carDriving](https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/b5d52ebc-941f-4a0c-9d82-7f6b325b30a1)
+
+# Debugging mode
+![Debugging1 - Made with Clipchamp](https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/7bbf7e5c-af7b-432a-bcf3-dedd3744621b)
+
+# Training process
+![Training - Made with Clipchamp](https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/ae01e689-7934-4905-ab30-f1a7ce4d3800)
+
