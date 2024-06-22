@@ -22,13 +22,14 @@ Welcome to my self-driving car reinforcement learning project! This project aims
 Feel free to explore the codebase and experiment with different hyperparameters to see how the agent learns to drive autonomously!
 
 # Demo
-https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/0c089528-05b0-436f-9e2e-bc834a2327dc
+https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/13d8ecf6-577c-4a66-8c41-fded3b0edffe
 
 # Debugging mode
-https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/eac23929-a2ac-4323-b4a9-3ea6fcb3695c
+https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/df652c13-4e49-4c3a-a8b8-8c177731d0bd
 
 # Training process
-https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/ed2bfa87-1fa3-4cb2-8462-b7016523eab5
+https://github.com/yahnyshc/selfDrivingCarRL/assets/143096926/0c39390e-841c-4018-ad68-18f52e9d3df0
+
 
 
 
