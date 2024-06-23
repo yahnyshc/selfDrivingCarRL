@@ -6,6 +6,8 @@ Welcome to my self-driving car reinforcement learning project! This project aims
 - Utilizes Double Deep Q-Learning algorithm for training the agent
 - Implements a custom environment for the agent to interact with
 - Agent learns the environment using sensors measuring distances to the walls
+- The neural network receives sensor distances as an input layer.
+- The output layer represents a discrete action space.
 - The steering wheel is displayed at the top of the screen to show agent's decisions
 - Provides visualization tools for monitoring agent performance and training progress
 - Allows for both training from scratch and loading a pre-trained model
